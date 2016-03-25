@@ -152,8 +152,7 @@ public class PhoneFactory {
                             cdmaSubscription, i);
                 }
                 Rlog.i(LOG_TAG, "Creating SubscriptionController");
-                TelephonyPluginDelegate.getInstance().initSubscriptionController(context,
-                        sCommandsInterfaces);
+                SubscriptionController.init(context, sCommandsInterfaces);
 
                 // Instantiate UiccController so that all other classes can just
                 // call getInstance()
@@ -163,15 +162,15 @@ public class PhoneFactory {
                     PhoneBase phone = null;
                     int phoneType = TelephonyManager.getPhoneType(networkModes[i]);
                     if (phoneType == PhoneConstants.PHONE_TYPE_GSM) {
-                        phone = TelephonyPluginDelegate.getInstance().makeGSMPhone(context,
+                        phone = new GSMPhone(context,
                                 sCommandsInterfaces[i], sPhoneNotifier, i);
                     } else if (phoneType == PhoneConstants.PHONE_TYPE_CDMA) {
-                        phone = TelephonyPluginDelegate.getInstance().makeCDMALTEPhone(context,
+                        phone = new CDMALTEPhone(context,
                                 sCommandsInterfaces[i], sPhoneNotifier, i);
                     }
                     Rlog.i(LOG_TAG, "Creating Phone with type = " + phoneType + " sub = " + i);
 
-                    sProxyPhones[i] = TelephonyPluginDelegate.getInstance().makePhoneProxy(phone);
+                    sProxyPhones[i] = new PhoneProxy(phone);
                 }
                 mProxyController = ProxyController.getInstance(context, sProxyPhones,
                         mUiccController, sCommandsInterfaces);
@@ -198,12 +197,10 @@ public class PhoneFactory {
                 sMadeDefaults = true;
 
                 Rlog.i(LOG_TAG, "Creating SubInfoRecordUpdater ");
-                sSubInfoRecordUpdater = TelephonyPluginDelegate.getInstance().
-                        makeSubscriptionInfoUpdater(context, sProxyPhones, sCommandsInterfaces);
+                sSubInfoRecordUpdater = new SubscriptionInfoUpdater(context,
+                        sProxyPhones, sCommandsInterfaces);
                 SubscriptionController.getInstance().updatePhonesAvailability(sProxyPhones);
 
-                TelephonyPluginDelegate.getInstance().
-                        initExtTelephonyClasses(context, sProxyPhones, sCommandsInterfaces);
                 // Start monitoring after defaults have been made.
                 // Default phone must be ready before ImsPhone is created
                 // because ImsService might need it when it is being opened.
@@ -217,16 +214,16 @@ public class PhoneFactory {
     public static Phone getCdmaPhone(int phoneId) {
         Phone phone;
         synchronized(PhoneProxy.lockForRadioTechnologyChange) {
-            phone = TelephonyPluginDelegate.getInstance().makeCDMALTEPhone(sContext,
-                    sCommandsInterfaces[phoneId], sPhoneNotifier, phoneId);
+            phone = new CDMALTEPhone(sContext, sCommandsInterfaces[phoneId],
+                    sPhoneNotifier, phoneId);
         }
         return phone;
     }
 
     public static Phone getGsmPhone(int phoneId) {
         synchronized(PhoneProxy.lockForRadioTechnologyChange) {
-            Phone phone = TelephonyPluginDelegate.getInstance().makeGSMPhone(sContext,
-                    sCommandsInterfaces[phoneId], sPhoneNotifier, phoneId);
+            Phone phone = new GSMPhone(sContext, sCommandsInterfaces[phoneId],
+                    sPhoneNotifier, phoneId);
             return phone;
         }
     }

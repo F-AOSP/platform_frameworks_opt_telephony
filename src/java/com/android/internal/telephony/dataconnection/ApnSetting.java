@@ -47,7 +47,7 @@ public class ApnSetting {
     public final String user;
     public final String password;
     public final int authType;
-    public String[] types;
+    public final String[] types;
     public final int id;
     public final String numeric;
     public final String protocol;

@@ -40,7 +40,6 @@ import com.android.internal.telephony.CommandsInterface;
 
 import android.telephony.TelephonyManager;
 
-import com.android.internal.telephony.TelephonyPluginDelegate;
 import com.android.internal.telephony.dataconnection.DcTracker;
 import com.android.internal.telephony.MccTable;
 import com.android.internal.telephony.OperatorInfo;
@@ -91,7 +90,7 @@ public class CDMALTEPhone extends CDMAPhone {
 
         Rlog.d(LOG_TAG, "CDMALTEPhone: constructor: sub = " + mPhoneId);
 
-        mDcTracker = TelephonyPluginDelegate.getInstance().makeDcTracker(this);
+        mDcTracker = new DcTracker(this);
 
     }
 

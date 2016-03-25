@@ -57,7 +57,6 @@ import static com.android.internal.telephony.CommandsInterface.CF_REASON_BUSY;
 import static com.android.internal.telephony.CommandsInterface.CF_REASON_UNCONDITIONAL;
 import static com.android.internal.telephony.CommandsInterface.SERVICE_CLASS_VOICE;
 
-import com.android.internal.telephony.TelephonyPluginDelegate;
 import com.android.internal.telephony.dataconnection.DcTracker;
 import com.android.internal.telephony.Call;
 import com.android.internal.telephony.CallForwardInfo;
@@ -157,8 +156,8 @@ public class GSMPhone extends PhoneBase {
         mCi.setPhoneType(PhoneConstants.PHONE_TYPE_GSM);
         mCT = new GsmCallTracker(this);
 
-        mSST = TelephonyPluginDelegate.getInstance().makeGsmServiceStateTracker(this);
-        mDcTracker = TelephonyPluginDelegate.getInstance().makeDcTracker(this);
+        mSST = new GsmServiceStateTracker(this);
+        mDcTracker = new DcTracker(this);
 
         if (!unitTestMode) {
             mSimPhoneBookIntManager = new SimPhoneBookInterfaceManager(this);
@@ -193,8 +192,8 @@ public class GSMPhone extends PhoneBase {
         mCi.setPhoneType(PhoneConstants.PHONE_TYPE_GSM);
         mCT = new GsmCallTracker(this);
 
-        mSST = TelephonyPluginDelegate.getInstance().makeGsmServiceStateTracker(this);
-        mDcTracker = TelephonyPluginDelegate.getInstance().makeDcTracker(this);
+        mSST = new GsmServiceStateTracker(this);
+        mDcTracker = new DcTracker(this);
 
         if (!unitTestMode) {
             mSimPhoneBookIntManager = new SimPhoneBookInterfaceManager(this);
@@ -340,8 +339,7 @@ public class GSMPhone extends PhoneBase {
         if (callForwardingIndicator == IccRecords.CALL_FORWARDING_STATUS_UNKNOWN) {
             callForwardingIndicator = getVoiceCallForwardingFlag();
         }
-        return (callForwardingIndicator == IccRecords.CALL_FORWARDING_STATUS_ENABLED) ||
-                getVideoCallForwardingPreference();
+        return (callForwardingIndicator == IccRecords.CALL_FORWARDING_STATUS_ENABLED);
     }
 
     @Override
@@ -1242,47 +1240,9 @@ public class GSMPhone extends PhoneBase {
     }
 
     @Override
-    public void getCallForwardingOption(int commandInterfaceCFReason,
-            int commandInterfaceServiceClass, Message onComplete) {
-        ImsPhone imsPhone = mImsPhone;
-        if ((imsPhone != null)
-                && (imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE
-                || imsPhone.isUtEnabled())) {
-            imsPhone.getCallForwardingOption(commandInterfaceCFReason,
-                    commandInterfaceServiceClass, onComplete);
-            return;
-        }
-
-        if (isValidCommandInterfaceCFReason(commandInterfaceCFReason)) {
-            if (LOCAL_DEBUG) Rlog.d(LOG_TAG, "requesting call forwarding query.");
-            Message resp;
-            if (commandInterfaceCFReason == CF_REASON_UNCONDITIONAL) {
-                resp = obtainMessage(EVENT_GET_CALL_FORWARD_DONE, onComplete);
-            } else {
-                resp = onComplete;
-            }
-            mCi.queryCallForwardStatus(commandInterfaceCFReason,
-                    commandInterfaceServiceClass, null, resp);
-        }
-    }
-
-    @Override
     public void setCallForwardingOption(int commandInterfaceCFAction,
             int commandInterfaceCFReason,
             String dialingNumber,
-            int timerSeconds,
-            Message onComplete) {
-        setCallForwardingOption(commandInterfaceCFAction,
-                commandInterfaceCFReason, dialingNumber,
-                CommandsInterface.SERVICE_CLASS_VOICE,
-                timerSeconds, onComplete);
-    }
-
-    @Override
-    public void setCallForwardingOption(int commandInterfaceCFAction,
-            int commandInterfaceCFReason,
-            String dialingNumber,
-            int commandInterfaceServiceClass,
             int timerSeconds,
             Message onComplete) {
         ImsPhone imsPhone = mImsPhone;
@@ -1290,8 +1250,7 @@ public class GSMPhone extends PhoneBase {
                 && ((imsPhone.getServiceState().getState() == ServiceState.STATE_IN_SERVICE)
                 || imsPhone.isUtEnabled())) {
             imsPhone.setCallForwardingOption(commandInterfaceCFAction,
-                    commandInterfaceCFReason, dialingNumber,
-                    commandInterfaceServiceClass, timerSeconds, onComplete);
+                    commandInterfaceCFReason, dialingNumber, timerSeconds, onComplete);
             return;
         }
 
@@ -1308,7 +1267,7 @@ public class GSMPhone extends PhoneBase {
             }
             mCi.setCallForward(commandInterfaceCFAction,
                     commandInterfaceCFReason,
-                    commandInterfaceServiceClass,
+                    CommandsInterface.SERVICE_CLASS_VOICE,
                     dialingNumber,
                     timerSeconds,
                     resp);
@@ -1602,8 +1561,6 @@ public class GSMPhone extends PhoneBase {
                     storeVoiceMailNumber(null);
                     setCallForwardingPreference(false);
                     setVmSimImsi(null);
-                    setVideoCallForwardingPreference(false);
-                    setSimImsi(null);
                     SubscriptionController controller =
                             SubscriptionController.getInstance();
                     controller.removeStaleSubPreferences(CF_ENABLED);

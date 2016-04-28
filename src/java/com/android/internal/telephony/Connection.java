@@ -38,24 +38,14 @@ public abstract class Connection {
         void onPostDialChar(char c);
     }
 
-   /**
-     * Capabilities that will be mapped to telecom connection
-     * capabilities.
-     */
-    public static class Capability {
-        public static final int SUPPORTS_DOWNGRADE_TO_VOICE_LOCAL = 0x00000001;
-        public static final int SUPPORTS_DOWNGRADE_TO_VOICE_REMOTE = 0x00000002;
-        public static final int SUPPORTS_VT_LOCAL_BIDIRECTIONAL = 0x00000004;
-        public static final int SUPPORTS_VT_REMOTE_BIDIRECTIONAL = 0x00000008;
-    }
-
     /**
      * Listener interface for events related to the connection which should be reported to the
      * {@link android.telecom.Connection}.
      */
     public interface Listener {
         public void onVideoStateChanged(int videoState);
-        public void onConnectionCapabilitiesChanged(int capability);
+        public void onLocalVideoCapabilityChanged(boolean capable);
+        public void onRemoteVideoCapabilityChanged(boolean capable);
         public void onWifiChanged(boolean isWifi);
         public void onVideoProviderChanged(
                 android.telecom.Connection.VideoProvider videoProvider);
@@ -74,7 +64,9 @@ public abstract class Connection {
         @Override
         public void onVideoStateChanged(int videoState) {}
         @Override
-        public void onConnectionCapabilitiesChanged(int capability) {}
+        public void onLocalVideoCapabilityChanged(boolean capable) {}
+        @Override
+        public void onRemoteVideoCapabilityChanged(boolean capable) {}
         @Override
         public void onWifiChanged(boolean isWifi) {}
         @Override
@@ -130,7 +122,8 @@ public abstract class Connection {
 
     Object mUserData;
     private int mVideoState;
-    private int mConnectionCapabilities;
+    private boolean mLocalVideoCapable;
+    private boolean mRemoteVideoCapable;
     private boolean mIsWifi;
     private int mAudioQuality;
     private int mCallSubstate;
@@ -519,33 +512,21 @@ public abstract class Connection {
     }
 
     /**
-     * Called to get Connection capabilities.Returns Capabilities bitmask.
-     * @See Connection.Capability.
+     * Returns the local video capability state for the connection.
+     *
+     * @return {@code True} if the connection has local video capabilities.
      */
-    public int getConnectionCapabilities() {
-        return mConnectionCapabilities;
+    public boolean isLocalVideoCapable() {
+        return mLocalVideoCapable;
     }
 
     /**
-     * Applies a capability to a capabilities bit-mask.
+     * Returns the remote video capability state for the connection.
      *
-     * @param capabilities The capabilities bit-mask.
-     * @param capability The capability to apply.
-     * @return The capabilities bit-mask with the capability applied.
+     * @return {@code True} if the connection has remote video capabilities.
      */
-    public static int addCapability(int capabilities, int capability) {
-        return capabilities | capability;
-    }
-
-    /**
-     * Removes a capability to a capabilities bit-mask.
-     *
-     * @param capabilities The capabilities bit-mask.
-     * @param capability The capability to remove.
-     * @return The capabilities bit-mask with the capability removed.
-     */
-    public static int removeCapability(int capabilities, int capability) {
-        return capabilities & ~capability;
+    public boolean isRemoteVideoCapable() {
+        return mRemoteVideoCapable;
     }
 
     /**
@@ -600,17 +581,26 @@ public abstract class Connection {
     }
 
     /**
-     * Called to set Connection capabilities.This will take Capabilities bitmask
-     * as input which is converted from Capabilities constants.
-     * @See Connection.Capability.
-     * @param capability The Capabilities bitmask.
+     * Sets whether video capability is present locally.
+     *
+     * @param capable {@code True} if video capable.
      */
-    public void setConnectionCapabilities(int capability) {
-        if(mConnectionCapabilities != capability) {
-            mConnectionCapabilities = capability;
-            for (Listener l : mListeners) {
-                l.onConnectionCapabilitiesChanged(mConnectionCapabilities);
-            }
+    public void setLocalVideoCapable(boolean capable) {
+        mLocalVideoCapable = capable;
+        for (Listener l : mListeners) {
+            l.onLocalVideoCapabilityChanged(mLocalVideoCapable);
+        }
+    }
+
+    /**
+     * Sets whether video capability is present remotely.
+     *
+     * @param capable {@code True} if video capable.
+     */
+    public void setRemoteVideoCapable(boolean capable) {
+        mRemoteVideoCapable = capable;
+        for (Listener l : mListeners) {
+            l.onRemoteVideoCapabilityChanged(mRemoteVideoCapable);
         }
     }
 

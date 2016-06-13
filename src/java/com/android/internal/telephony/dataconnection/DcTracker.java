@@ -74,6 +74,7 @@ import android.view.WindowManager;
 import android.telephony.CarrierConfigManager;
 
 import com.android.internal.R;
+import com.android.internal.telephony.cdma.CdmaSubscriptionSourceManager;
 import com.android.internal.annotations.VisibleForTesting;
 import com.android.internal.telephony.PhoneFactory;
 import com.android.internal.telephony.DctConstants;
@@ -1333,6 +1334,15 @@ public class DcTracker extends Handler {
         setupDataOnConnectableApns(Phone.REASON_DATA_ATTACHED);
     }
 
+    private boolean isNvSubscription() {
+        int cdmaSubscriptionSource = CdmaSubscriptionSourceManager.getDefault(mPhone.getContext());
+        if (cdmaSubscriptionSource ==
+                CdmaSubscriptionSourceManager.SUBSCRIPTION_FROM_NV) {
+            return true;
+        }
+        return false;
+    }
+
     private boolean isDataAllowed(DataAllowFailReason failureReason) {
         final boolean internalDataEnabled;
         internalDataEnabled = mDataEnabledSettings.isInternalDataEnabled();
@@ -1348,6 +1358,7 @@ public class DcTracker extends Handler {
 
         IccRecords r = mIccRecords.get();
         boolean recordsLoaded = false;
+        boolean subscriptionFromNv = isNvSubscription();
         if (r != null) {
             recordsLoaded = r.getRecordsLoaded();
             if (DBG && !recordsLoaded) log("isDataAllowed getRecordsLoaded=" + recordsLoaded);
@@ -1373,7 +1384,7 @@ public class DcTracker extends Handler {
             if(failureReason == null) return false;
             failureReason.addDataAllowFailReason(DataAllowFailReasonType.NOT_ATTACHED);
         }
-        if (!recordsLoaded) {
+        if (!(recordsLoaded || subscriptionFromNv)) {
             if(failureReason == null) return false;
             failureReason.addDataAllowFailReason(DataAllowFailReasonType.RECORD_NOT_LOADED);
         }
